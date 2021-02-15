@@ -35,10 +35,6 @@ twitter_token <- create_token(
   consumer_key = key,
   consumer_secret = secret)
 
-options(httr_oauth_cache=TRUE)
-setup_twitter_oauth(consumer_key = key, consumer_secret = secret,
-                    access_token = access_token, access_secret = access_secret)
-
 
 ###### CUENTAS OFICIALES #######
 ################################
@@ -50,7 +46,6 @@ write.xml(co_var, "CuentasOficiales_02_14.xml")
 write.csv(co_var,"CuentasOficiales_02_14.csv")
 tweets <- read_excel("CuentasOficiales_02_14.xlsx")
 tweetscsv <- read.csv("CuentasOficiales_02_14.csv")
-View(tweets)
 
 
 ###### CUENTAS PERSONALES #######
@@ -63,20 +58,6 @@ write.xml(cp_var, "CuentasPersonales_02_14.xml")
 write.csv(cp_var,"CuentasPersonales_02_14.csv")
 tweetsp <- read_excel("CuentasPersonales_02_14.xlsx")
 tweetscsvp <- read.csv("CuentasPersonales_02_14.csv")
-View(tweetscsvp)
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
