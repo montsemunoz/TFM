@@ -29,6 +29,35 @@ twitter_token <- create_token(
   consumer_key = key,
   consumer_secret = secret)
 
+# create token named "twitter_token"
+twitter_token <- create_token(
+  app = appname,
+  consumer_key = key,
+  consumer_secret = secret)
+
+options(httr_oauth_cache=TRUE)
+setup_twitter_oauth(consumer_key = key, consumer_secret = secret,
+                    access_token = access_token, access_secret = access_secret)
+
+
+###### CUENTAS OFICIALES #######
+################################
+
+co <- get_timeline(user = c("vox_es","populares",'CiudadanosCs','PSOE','PODEMOS','Esquerra_ERC','JuntsXCat','eajpnv','ehbildu'),n = 200)
+co_var <- co %>% select(user_id, status_id, created_at, screen_name, text)
+co_var$created_at <- as.character(co_var$created_at)
+write.xml(co_var, "Cuentas Oficiales.xml")
+tweets <- read_excel("Cuentas Oficiales.xlsx")
+View(tweets)
+
+
+
+
+
+
+
+
+
 #### VOX ####
 
 vox <- get_timeline(user = "vox_es",n = 200)
@@ -85,6 +114,27 @@ jpc_var <- jpc%>% select(user_id, status_id, screen_name, text)
 write.xml(jpc_var, "jpc.xml")
 jpc_tweets <- read_excel("jpc.xlsx")
 View(jpc_tweets)
+
+#### PNV ####
+
+pnv <- get_timeline(user = "eajpnv", start = '2021 - 02 - 01', end=' 2021 - 02 - 14')
+pnv_var <- pnv%>% select(user_id, status_id, created_at, screen_name, text)
+pnv_var$created_at <- as.character(pnv_var$created_at)
+write.xml(pnv_var, "pnv.xml")
+write.csv(pnv_var,"pnv.csv")
+pnv_tweets_csv <- read.csv("pnv.csv")
+pnv_tweets <- read_excel("pnv.xlsx")
+View(pnv_tweets_csv)
+View(pnv_tweets)
+
+#### Bildu ####
+
+jpc <- get_timeline(user = "ehbildu",n = 200)
+jpc_var <- jpc%>% select(user_id, status_id, screen_name, text)
+write.xml(jpc_var, "jpc.xml")
+jpc_tweets <- read_excel("jpc.xlsx")
+View(jpc_tweets)
+
 
 
 
