@@ -29,36 +29,26 @@ twitter_token <- create_token(
   consumer_key = key,
   consumer_secret = secret)
 
-# create token named "twitter_token"
-twitter_token <- create_token(
-  app = appname,
-  consumer_key = key,
-  consumer_secret = secret)
-
-
 ###### CUENTAS OFICIALES #######
 ################################
 
-co <- get_timeline(user = c("vox_es","populares",'CiudadanosCs','PSOE','PODEMOS','Esquerra_ERC','JuntsXCat','eajpnv','ehbildu'),n = 3000)
-co_var <- co %>% select(user_id, status_id, created_at, screen_name, text, retweet_count) %>% filter(created_at > "2021-02-01") %>% filter(created_at < "2021-02-15")
+co <- get_timeline(user = c("vox_es","populares",'CiudadanosCs','PSOE','PODEMOS','Esquerra_ERC','JuntsXCat','eajpnv','ehbildu'),n = 500)
+co_var <- co %>% select(user_id, status_id, created_at, screen_name, text, retweet_count) %>% filter(created_at > "2021-02-15") %>% filter(created_at < "2021-02-22")
 co_var$created_at <- as.character(co_var$created_at)
-write.xml(co_var, "CuentasOficiales_02_14.xml")
-write.csv(co_var,"CuentasOficiales_02_14.csv")
-tweets <- read_excel("CuentasOficiales_02_14.xlsx")
-tweetscsv <- read.csv("CuentasOficiales_02_14.csv")
+write.xml(co_var, "CuentasOficiales_02_21.xml")
+write.csv(co_var,"CuentasOficiales_02_21.csv")
+tweets <- read_excel("CuentasOficiales_02_21.xlsx")
+tweetscsv <- read.csv("CuentasOficiales_02_21.csv")
 
 
 ###### CUENTAS PERSONALES #######
 ################################
 
-cp <- get_timeline(user = c("Santi_ABASCAL","pablocasado_",'InesArrimadas','sanchezcastejon','PabloIglesias','perearagones','LauraBorras','AITOR_ESTEBAN','ArnaldoOtegi'),n = 3000)
-cp_var <- cp %>% select(user_id, status_id, created_at, screen_name, text,retweet_count) %>% filter(created_at > "2021-02-01") %>% filter(created_at < "2021-02-15")
+cp <- get_timeline(user = c("Santi_ABASCAL","pablocasado_",'InesArrimadas','sanchezcastejon','PabloIglesias','perearagones','LauraBorras','AITOR_ESTEBAN','ArnaldoOtegi'),n = 500)
+cp_var <- cp %>% select(user_id, status_id, created_at, screen_name, text,retweet_count) %>% filter(created_at > "2021-02-15") %>% filter(created_at < "2021-02-22")
 cp_var$created_at <- as.character(cp_var$created_at)
-write.xml(cp_var, "CuentasPersonales_02_14.xml")
-write.csv(cp_var,"CuentasPersonales_02_14.csv")
-tweetsp <- read_excel("CuentasPersonales_02_14.xlsx")
-tweetscsvp <- read.csv("CuentasPersonales_02_14.csv")
-
-
-
+write.xml(cp_var, "CuentasPersonales_02_21.xml")
+write.csv(cp_var,"CuentasPersonales_02_21.csv")
+tweetsp <- read_excel("CuentasPersonales_02_21.xlsx")
+tweetscsvp <- read.csv("CuentasPersonales_02_21.csv")
 
