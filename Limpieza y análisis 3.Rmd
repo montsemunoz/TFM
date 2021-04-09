@@ -543,11 +543,11 @@ dtmv <- DocumentTermMatrix(corpusv[doc.lengths > 0]) #documents== Tweets, terms=
 ```
 
 ```{r}
-#LDA model with 5 topics selected
-lda_5v = LDA(dtmv, k = 5, method = 'Gibbs', control = list(seed = list(1505)))
-
 #LDA model with 2 topics selected
 lda_2v = LDA(dtmv, k = 2, method = 'Gibbs', control = list(seed = list(1505)))
+
+#LDA model with 5 topics selected
+lda_5v = LDA(dtmv, k = 5, method = 'Gibbs', control = list(seed = list(1505)))
 
 #LDA model with 10 topics selected
 lda_10v = LDA(dtmv, k = 10, method = 'Gibbs', control = list(seed = list(1505)))
