@@ -1,0 +1,345 @@
+---
+title: "Análisis"
+author: "Montse Muñoz Aragón"
+date: "19/4/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE, warning=FALSE}
+# install.packages("stringr")
+# install.packages("xlsx")
+# install.packages("devtools")
+# install.packages("stopwords")
+# install.packages("tm")
+# install.packages("quanteda")
+# install.packages("e1071")
+# install.packages("wordcloud")
+# install.packages("RColorBrewer")
+# install.packages ("ggraph")
+# install.packages("topicmodels")
+library(stringr)
+library(devtools)
+library(dplyr)
+library(purrr)
+library(tidyr)
+library(stopwords)
+library(tm)
+library(quanteda)
+library(e1071)
+library(readxl)
+library(lubridate)
+library(ggplot2)
+library(wordcloud)
+library(RColorBrewer)
+library(gridExtra)
+library(scales)
+library(tidytext)
+library(igraph)
+library(ggraph)
+library(forcats)
+library(topicmodels)
+library(textmineR)
+library(BullsEyeR)
+```
+
+## Lectura de datos
+
+```{r warning=FALSE}
+datos <- read.csv2("Cuentas Oficiales y Personales.csv")
+head(datos)
+nrow(datos)
+```
+
+```{r}
+# Se renombran las variables con partidos más prácticos
+datos <- datos %>% rename(user_id = user_id, status_id=status_id, fecha = created_at,
+                            partido = screen_name, tweet = text, retweets=retweet_count)
+head(datos)
+```
+
+## Juntar partidos y presidentes
+
+```{r}
+datos <- datos %>%
+  mutate(partido = fct_recode(partido,
+    "vox_es" = "Santi_ABASCAL",
+    "populares" = "pablocasado_",
+    "CiudadanosCs" = "InesArrimadas",
+    "PSOE" = "sanchezcastejon",
+    "PODEMOS" = "PabloIglesias",
+    "Esquerra_ERC" = "perearagones",
+    "JuntsXCat" = "LauraBorras",
+    "eajpnv" = "AITOR_ESTEBAN",
+    "ehbildu" = "ArnaldoOtegi"))
+datos %>% count(partido)
+```
+
+```{r}
+# Se cambian los nombres de los partidos políticos por las siglas 
+
+datos <- datos %>%
+  mutate(partido = fct_recode(partido,
+    "VOX" = "vox_es",
+    "PP" = "populares",
+    "C's" = "CiudadanosCs",
+    "PSOE" = "PSOE",
+    "UP" = "PODEMOS",
+    "ERC" = "Esquerra_ERC",
+    "JuntsXCat" = "JuntsXCat",
+    "PNV" = "eajpnv",
+    "Bildu" = "ehbildu"))
+datos %>% count(partido)
+```
+
+```{r}
+# Se seleccionan los partidos principales no-regionales de España
+nom <- c("VOX","PP","C's","PSOE","UP")
+datos <- datos %>% filter(partido %in% nom)
+nrow(datos)
+```
+
+```{r}
+datos$fecha <- as.Date.character(datos$fecha)
+
+## Campaña de Madrid (mediados de marzo-9 mayo)
+datos <- datos[datos$fecha>="2021-03-10",]
+nrow(datos)
+```
+
+## Limpieza
+
+```{r}
+limpiar_tokenizar <- function(texto){
+    # Se convierte todo el texto a minúsculas
+    nuevo_texto <- tolower(texto)
+    # No repetir tweets
+    nuevo_texto <- unique(nuevo_texto)
+    # Eliminar tildes
+    nuevo_texto <- chartr("áéíóú", "aeiou", nuevo_texto)
+    # Eliminación de páginas web
+    nuevo_texto <- str_replace_all(nuevo_texto,"https.+", "")
+    # Eliminación de menciones
+    nuevo_texto <- str_replace_all(nuevo_texto,"@\\w+", " ")
+    # Eliminación de signos de puntuación
+    nuevo_texto <- str_replace_all(nuevo_texto,"[^[:alnum:][:space:]#]", " ")
+    # Eliminación de números
+    nuevo_texto <- str_replace_all(nuevo_texto,"[[:digit:]]", " ")
+    # Eliminación de espacios en blanco múltiples
+    nuevo_texto <- str_replace_all(nuevo_texto,"[\\s]+", " ")
+    # Tokenización por palabras individuales
+    nuevo_texto <- str_split(nuevo_texto, " ")[[1]]
+    # Eliminación de tokens con una longitud < 2
+    nuevo_texto <- keep(nuevo_texto, .p = function(x){str_length(x) > 2})
+    return(nuevo_texto)
+}
+
+tweets <- datos %>% mutate(texto_tokenizado = map(.x = datos$tweet, .f = limpiar_tokenizar))
+tweets %>% select(texto_tokenizado) %>% head()
+tweets %>% slice(1) %>% select(texto_tokenizado) %>% pull()
+```
+
+
+```{r}
+tweets$texto_tokenizado[1]
+```
+
+```{r}
+tweets_tidy <- tweets %>% select(-tweet)%>%unnest(cols=c(texto_tokenizado))
+tweets_tidy <- tweets_tidy %>% rename(token = texto_tokenizado)
+#head(tweets_tidy)
+nrow(tweets_tidy)
+```
+
+## Extracción de características
+
+```{r}
+stopwords <- stopwords("spanish")
+```
+
+```{r}
+tweets_tidy <- tweets_tidy %>% filter(!(token %in% stopwords))
+nrow(tweets_tidy)
+```
+
+```{r}
+tweets_tidy %>% count(token, sort = T)
+```
+
+## Análisis exploratorio 
+
+- Tweets por partido
+
+```{r}
+datos %>% group_by(partido) %>% count()
+```
+
+- Distribución temporal de los tweets por partido
+
+```{r}
+ggplot(tweets, aes(x = as.Date(fecha), fill = partido)) +
+  geom_histogram(position = "identity", bins = 20,color="black", show.legend = FALSE) +
+  scale_x_date(date_labels = "%d-%m", date_breaks = "2 weeks") +
+    theme(axis.text.x = element_text(angle = 90, size=8))+
+  labs(x = "Fecha de publicación", y = "Número de tweets") +
+  facet_wrap(~ partido, ncol = 5) +
+  scale_fill_manual(values=c("orange","#a9def2","#b280d2","red","#80ddb8"))
+  theme_bw()
+```
+
+```{r}
+tweets_fecha <- tweets %>% mutate(fecha = format(fecha, "%Y-%d-%m"))
+tweets_fecha %>% group_by(partido, fecha) %>% summarise(n = n()) %>%
+  ggplot(aes(x = fecha, y = n, color = partido)) +
+  geom_line(aes(group = partido)) +
+  scale_color_manual(values=c("orange","#a9def2","#b280d2","red","#80ddb8"))+
+  labs(title = "Número de tweets publicados", x = "Fecha de publicación",
+       y = "Número de tweets") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, size = 7),
+        legend.position = "bottom")
+```
+
+- Total de palabras utilizadas por cada usuario 
+
+```{r}
+tweets_tidy %>% group_by(partido) %>% summarise(n = n()) 
+```
+
+```{r}
+tweets_tidy %>%  ggplot(aes(x = partido)) + geom_bar(fill=c("orange","#a9def2","#b280d2","red","#80ddb8")) + coord_flip() + theme_bw()
+```
+
+- Palabras distintas utilizadas por cada usuario
+
+```{r}
+tweets_tidy %>% select(partido, token) %>% distinct() %>%  group_by(partido) %>% summarise(palabras_distintas = n())
+```
+
+```{r}
+tweets_tidy %>% select(partido, token) %>% distinct() %>%ggplot(aes(x = partido)) + geom_bar(fill=c("orange","#a9def2","#b280d2","red","#80ddb8")) + coord_flip() + theme_bw()
+```
+
+- Longitud media de los tweets por usuario
+
+```{r}
+tweets_tidy %>% group_by(partido, status_id) %>% summarise(longitud = n()) %>% group_by(partido) %>% summarise(media_longitud = mean(longitud), sd_longitud = sd(longitud))
+```
+
+```{r}
+tweets_tidy %>% group_by(partido, status_id) %>% summarise(longitud = n()) %>% group_by(partido) %>%
+                summarise(media_longitud = mean(longitud),
+                          sd_longitud = sd(longitud)) %>%
+                ggplot(aes(x = partido, y = media_longitud)) +
+                geom_col(fill=c("orange","#a9def2","#b280d2","red","#80ddb8")) +
+                geom_errorbar(aes(ymin = media_longitud - sd_longitud,
+                                  ymax = media_longitud + sd_longitud)) +
+                coord_flip() + theme_bw()
+```
+
+```{r}
+tweets_tidy %>% group_by(partido, status_id) %>% summarise(longitud = n()) %>% group_by(partido) %>%
+                summarise(longitud_media = mean(longitud)) %>%
+                ggplot(aes(x = partido, y = longitud_media)) +
+                geom_col(fill=c("orange","#a9def2","#b280d2","red","#80ddb8")) +
+                coord_flip() + theme_bw()
+```
+
+- Palabras más utilizadas por usuario
+
+```{r}
+palabras <- tweets_tidy %>% group_by(partido, token) %>% count(token) %>% group_by(partido) %>% top_n(20, n) %>% arrange(partido, desc(n)) %>% print(n=30)
+palabras
+```
+
+- Representación gráfica de las frecuencias
+
+```{r}
+tweets_tidy %>% group_by(partido, token) %>% count(token) %>% group_by(partido) %>%
+                top_n(10, n) %>% arrange(partido, desc(n)) %>%
+                ggplot(aes(x = reorder(token,n), y = n, fill = partido)) +
+                geom_col() +
+                scale_fill_manual(values=c("orange","#a9def2","#b280d2","red","#80ddb8"))+
+                theme_bw() +
+                labs(y = "", x = "") +
+                theme(legend.position = "none") +
+                coord_flip() +
+                facet_wrap(~partido,scales = "free", ncol = 3, drop = TRUE)
+                
+```
+
+- Wordcloud de cada partido
+
+```{r warning=F}
+wordcloud_custom <- function(grupo, df){
+  print(grupo)
+  wordcloud(words = df$token, freq = df$frecuencia,
+            max.words = 300, random.order = FALSE, rot.per = 0.35,
+            colors = brewer.pal(7, "Dark2"))
+}
+
+df_grouped <- tweets_tidy %>% group_by(partido, token) %>% count(token) %>%
+              group_by(partido) %>% mutate(frecuencia = n / n()) %>%
+              arrange(partido, desc(frecuencia)) %>% nest() 
+
+walk2(.x = df_grouped$partido, .y = df_grouped$data, .f = wordcloud_custom)
+```
+
+## Todos los tweets de cada partido en uno --> 5 documentos
+
+```{r}
+p1 <- c()
+p2 <- c()
+p3 <- c()
+p4 <- c()
+p5 <- c()
+
+for (i in 1:nrow(tweets_tidy)){
+  
+  if(tweets_tidy$partido[i]=="VOX"){
+  
+    p1 <- c(p1, tweets_tidy$token[[i]])
+  }
+    
+  if(tweets_tidy$partido[i]=="PP"){
+  
+    p2 <- c(p2, tweets_tidy$token[[i]])
+    
+  }
+  if(tweets_tidy$partido[i]=="C's"){
+  
+    p3 <- c(p3, tweets_tidy$token[[i]])
+    
+  }
+  if(tweets_tidy$partido[i]=="PSOE"){
+  
+    p4 <- c(p4, tweets_tidy$token[[i]])
+    
+  }
+  if(tweets_tidy$partido[i]=="UP"){
+  
+    p5 <- c(p5, tweets_tidy$token[[i]])
+    
+  }
+  
+}
+p11 <- paste(p1, collapse=" ")
+p12 <- paste(p2, collapse=" ")
+p13 <- paste(p3, collapse=" ")
+p14 <- paste(p4, collapse=" ")
+p15 <- paste(p5, collapse=" ")
+
+
+M <- as.data.frame(matrix(ncol=1,nrow=5,NA))
+colnames(M) <- c("palabras")
+rownames(M) <- c("VOX","PP","C's","PSOE","UP")
+f <- c(p11,p12,p13,p14,p15)
+
+for ( i in 1:length(f)){
+  M[i,] <- f[i]
+}
+```
+

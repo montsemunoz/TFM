@@ -47,18 +47,13 @@ doc.lengths <- rowSums(as.matrix(DocumentTermMatrix(corpus)))
 dtm <- DocumentTermMatrix(corpus[doc.lengths > 0]) #documents== tweets cada partido, terms== palabras
 ```
 
-By default α is estimated (estimate.alpha =TRUE) and the starting value for α is 50/k as suggested by Griffiths and Steyvers (2004).
-If α is not estimated, it is held fixed at the initial value. If the term distributions for the topics are already given by a previously fitted model, only the topic distributions for documents can be estimated using estimate.beta = FALSE. This is useful for example if a fitted model is evaluated on hold-out data or for new data.
-
-##### Gibbs
-
-###### Número de tópicos
+- Número de tópicos
 
 ```{r}
 result <- FindTopicsNumber(
 dtm,
 topics = seq(from = 2, to = 14, by = 1),
-metrics = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014"),
+metrics = c("CaoJuan2009","Deveaud2014"),
 method = "Gibbs",
 control = list(seed = 77),
 mc.cores = NA,
@@ -69,122 +64,54 @@ verbose = TRUE)
 FindTopicsNumber_plot(result)
 ```
 
-###### LDA
+### Gibbs
+
+- LDA
 
 ```{r}
+t <- proc.time()
 lda_6g <- LDA(dtm, k = 6, method = 'Gibbs', control = list(seed = list(1505)))
-lda_8g <- LDA(dtm, k = 8, method = 'Gibbs', control = list(seed = list(1505)))
-lda_9g <- LDA(dtm, k = 9, method = 'Gibbs', control = list(seed = list(1505)))
-lda_10g <- LDA(dtm, k = 10, method = 'Gibbs', control = list(seed = list(1505)))
-lda_11g <- LDA(dtm, k = 11, method = 'Gibbs', control = list(seed = list(1505)))
+proc.time()-t
+
+```
+
+```{r}
+t <- proc.time()
 lda_12g <- LDA(dtm, k = 12, method = 'Gibbs', control = list(seed = list(1505)))
-lda_14g <- LDA(dtm, k = 14, method = 'Gibbs', control = list(seed = list(1505)))
+proc.time()-t
 ```
 
 ```{r}
 terms(lda_6g,5)
-terms(lda_8g,5)
-terms(lda_9g,5)
-terms(lda_10g,5)
-terms(lda_11g,5)
+
 terms(lda_12g,5)
-terms(lda_14g,5)
 ```
 
 - Probabilidad de que una palabra pertenezca a un tópico
 
 ```{r}
 lda_td6g <- tidy(lda_6g, matrix = "beta")
-lda_td8g <- tidy(lda_8g, matrix = "beta")
-lda_td9g <- tidy(lda_9g, matrix = "beta")
-lda_td10g <- tidy(lda_10g, matrix = "beta")
-lda_td11g <- tidy(lda_11g, matrix = "beta")
+
 lda_td12g <- tidy(lda_12g, matrix = "beta")
-lda_td14g <- tidy(lda_14g, matrix = "beta")
 ```
 
 ```{r}
 terminos_frecuentes6g <- lda_td6g %>% group_by(topic) %>%  ungroup() %>% arrange(topic, -beta)
 top6g <- terminos_frecuentes6g %>% group_by(topic) %>% top_n(10, beta)
 
-terminos_frecuentes8g <- lda_td8g %>% group_by(topic) %>% ungroup() %>% arrange(topic, -beta)
-top8g <- terminos_frecuentes8g %>% group_by(topic) %>% top_n(10, beta) 
-
-terminos_frecuentes9g <- lda_td9g %>% group_by(topic) %>% ungroup() %>% arrange(topic, -beta)
-top9g <- terminos_frecuentes9g %>% group_by(topic) %>% top_n(10, beta) 
-
-terminos_frecuentes10g <- lda_td10g %>% group_by(topic) %>% ungroup() %>% arrange(topic, -beta)
-top10g <- terminos_frecuentes10g %>% group_by(topic) %>% top_n(10, beta)
-
-terminos_frecuentes11g <- lda_td11g %>% group_by(topic) %>% ungroup() %>% arrange(topic, -beta)
-top11g <- terminos_frecuentes11g %>% group_by(topic) %>% top_n(10, beta) 
-
 terminos_frecuentes12g <- lda_td12g %>% group_by(topic) %>% ungroup() %>% arrange(topic, -beta)
 top12g <- terminos_frecuentes12g %>% group_by(topic) %>% top_n(10, beta)
 
-terminos_frecuentes14g <- lda_td14g %>% group_by(topic) %>% ungroup() %>% arrange(topic, -beta)
-top14g <- terminos_frecuentes14g %>% group_by(topic) %>% top_n(10, beta)
 ```
 
-- Entropía palabras por tópico
-
-```{r}
-sum <- 0
-v <- c()
-
-top <- c(1:6)
-
-for( i in 1:length(top)){
-  
-  topico <- terminos_frecuentes10g[terminos_frecuentes10g$topic==i,]
-  
-  for (j in 1:nrow(topico)){
-  
-    sum <- sum + (topico$beta[j]*log(1/topico$beta[j], base=2))
-  }
-  
-  v <- c(v,sum)
-  sum <- 0
-}
-v
-```
-
-
-### Histograma
+- Histograma de top 10 palabras en cada tópico
 
 ```{r}
 ap_top_terms6g <- lda_td6g %>% group_by(topic) %>% slice_max(beta, n = 10) %>% ungroup() %>% arrange(topic, -beta)
 
+#ap_top_terms6g <- lda_td6g %>% group_by(topic)  %>% filter(beta>0.006) %>% ungroup() %>% arrange(topic, -beta)
+
 ap_top_terms6g %>% mutate(term = reorder_within(term, beta, topic)) %>% ggplot(aes(beta, term, fill = factor(topic))) +
-geom_col(show.legend = FALSE) + facet_wrap(~ topic, scales = "free") + scale_y_reordered()
-```
-
-```{r}
-ap_top_terms8g <- lda_td8g %>% group_by(topic) %>% slice_max(beta, n = 10) %>% ungroup() %>% arrange(topic, -beta)
-
-ap_top_terms8g %>% mutate(term = reorder_within(term, beta, topic)) %>% ggplot(aes(beta, term, fill = factor(topic))) +
-geom_col(show.legend = FALSE) + facet_wrap(~ topic, scales = "free", ncol=4) + scale_y_reordered()
-```
-
-
-```{r}
-ap_top_terms9g <- lda_td9g %>% group_by(topic) %>% slice_max(beta, n = 10) %>% ungroup() %>% arrange(topic, -beta)
-
-ap_top_terms9g %>% mutate(term = reorder_within(term, beta, topic)) %>% ggplot(aes(beta, term, fill = factor(topic))) +
-geom_col(show.legend = FALSE) + facet_wrap(~ topic, scales = "free") + scale_y_reordered()
-```
-
-```{r}
-ap_top_terms10g <- lda_td10g %>% group_by(topic) %>% slice_max(beta, n = 10) %>% ungroup() %>% arrange(topic, -beta)
-
-ap_top_terms10g %>% mutate(term = reorder_within(term, beta, topic)) %>% ggplot(aes(beta, term, fill = factor(topic))) +
-geom_col(show.legend = FALSE) + facet_wrap(~ topic, scales = "free", ncol=5) + scale_y_reordered()
-```
-
-```{r}
-ap_top_terms11g <- lda_td11g %>% group_by(topic) %>% slice_max(beta, n = 10) %>% ungroup() %>% arrange(topic, -beta)
-
-ap_top_terms11g %>% mutate(term = reorder_within(term, beta, topic)) %>% ggplot(aes(beta, term, fill = factor(topic))) +
 geom_col(show.legend = FALSE) + facet_wrap(~ topic, scales = "free") + scale_y_reordered()
 ```
 
@@ -192,24 +119,15 @@ geom_col(show.legend = FALSE) + facet_wrap(~ topic, scales = "free") + scale_y_r
 ap_top_terms12g <- lda_td12g %>% group_by(topic) %>% slice_max(beta, n = 10) %>% ungroup() %>% arrange(topic, -beta)
 
 ap_top_terms12g %>% mutate(term = reorder_within(term, beta, topic)) %>% ggplot(aes(beta, term, fill = factor(topic))) +
-geom_col(show.legend = FALSE) + facet_wrap(~ topic, scales = "free", ncol=4) + scale_y_reordered()
-```
-
-```{r}
-ap_top_terms14g <- lda_td14g %>% group_by(topic) %>% slice_max(beta, n = 10) %>% ungroup() %>% arrange(topic, -beta)
-
-ap_top_terms14g %>% mutate(term = reorder_within(term, beta, topic)) %>% ggplot(aes(beta, term, fill = factor(topic))) +
-geom_col(show.legend = FALSE) + facet_wrap(~ topic, scales = "free", ncol=4) + scale_y_reordered()
+geom_col(show.legend = FALSE) + facet_wrap(~ topic, scales = "free") + scale_y_reordered()
 ```
 
 - Probabilidad de que un documento pertenzeca a un tópico
 
 ```{r}
 lda_gamma6g <- tidy(lda_6g, matrix = "gamma")
-lda_gamma8g <- tidy(lda_8g, matrix = "gamma")
-lda_gamma10g <- tidy(lda_10g, matrix = "gamma")
+
 lda_gamma12g <- tidy(lda_12g, matrix = "gamma")
-lda_gamma14g <- tidy(lda_14g, matrix = "gamma")
 ```
 
 - Entropía tópicos por documento
@@ -226,7 +144,7 @@ for( i in 1:length(doc)){
   
   for (j in 1:nrow(documento)){
   
-    sum <- sum + (documento$gamma[j]*log(1/documento$gamma[j], base=2))
+    sum <- sum + (documento$gamma[j]*log(1/documento$gamma[j]))
   }
   
   v <- c(v,sum)
@@ -235,98 +153,113 @@ for( i in 1:length(doc)){
 v
 ```
 
-- Heatmap
+- Entropía palabras por tópico
+
+```{r}
+sum <- 0
+v <- c()
+
+top <- c(1:6)
+
+for( i in 1:length(top)){
+  
+  topico <- terminos_frecuentes6g[terminos_frecuentes6g$topic==i,]
+  
+  for (j in 1:nrow(topico)){
+  
+    sum <- sum + (topico$beta[j]*log(1/topico$beta[j]))
+  }
+  
+  v <- c(v,sum)
+  sum <- 0
+}
+v
+```
+
+- Heatmap de tópicos por partido
 
 ```{r}
 topics <- topicmodels::posterior(lda_6g, dtm)[["topics"]]
-colores <- colorRampPalette(c("grey", "white", "steelblue"))(256)
-heatmap(topics, scale = "none",col=colores)
+rownames(topics) <- c("VOX","PP","C's","PSOE","UP")
+colnames(topics) <- c("Tópico 1","Tópico 2","Tópico 3","Tópico 4","Tópico 5","Tópico 6")
+#colores <- colorRampPalette(c("grey", "white", "steelblue"))(256)
+colores <- colorRampPalette(brewer.pal(8, "Blues"))(25)
+heatmap(topics, scale = "none",col= colores, cexRow = 1.3, cexCol = 1.3)
 ```
 
-##### Inferencia variacional
+- Wordcloud con 6 tópicos
 
-- Probabilidad de que una palabra pertenezca a un tópico
+```{r warning=FALSE}
+
+for(i in 1:6){
+df <- data.frame(term = lda_6g@terms, p = exp(lda_6g@beta[i,]))
+wordcloud(words = df$term,
+          freq = df$p,
+          max.words = 300,
+          random.order = FALSE,
+          rot.per = 0.15,
+          colors=brewer.pal(8, "Dark2"))
+}
+
+```
+
+### Inferencia variacional
+
+- LDA
 
 ```{r}
+t <- proc.time()
 lda_6i <- LDA(dtm, k = 6, method = 'VEM', control = list(seed = list(1505)))
+proc.time()-t
+```
 
-lda_8i <- LDA(dtm, k = 8, method = 'VEM', control = list(seed = list(1505)))
-
-lda_10i <- LDA(dtm, k = 10, method = 'VEM', control = list(seed = list(1505)))
-
+```{r}
+t <- proc.time()
 lda_12i <- LDA(dtm, k = 12, method = 'VEM', control = list(seed = list(1505)))
-
-lda_14i <- LDA(dtm, k = 14, method = 'VEM', control = list(seed = list(1505)))
+proc.time()-t
 ```
 
 ```{r}
 terms(lda_6i,5)
-terms(lda_8i,5)
-terms(lda_10i,5)
+
 terms(lda_12i,5)
-terms(lda_14i,5)
 ```
+
+- Probabilidad de que una palabra pertenezca a un tópico
 
 ```{r}
 lda_td6i <- tidy(lda_6i, matrix = "beta")
-lda_td8i <- tidy(lda_8i, matrix = "beta")
-lda_td10i <- tidy(lda_10i, matrix = "beta")
+
 lda_td12i <- tidy(lda_12i, matrix = "beta")
-lda_td14i <- tidy(lda_14i, matrix = "beta")
 ```
 
 ```{r}
 terminos_frecuentes6i <- lda_td6i %>% group_by(topic) %>% top_n(10, beta) %>% ungroup() %>% arrange(topic, -beta)
-terminos_frecuentes8i <- lda_td8i %>% group_by(topic) %>% top_n(10, beta) %>% ungroup() %>% arrange(topic, -beta)
-terminos_frecuentes10i <- lda_td10i %>% group_by(topic) %>% top_n(10, beta) %>% ungroup() %>% arrange(topic, -beta)
+
 terminos_frecuentes12i <- lda_td12i %>% group_by(topic) %>% top_n(10, beta) %>% ungroup() %>% arrange(topic, -beta)
-terminos_frecuentes14i <- lda_td14i %>% group_by(topic) %>% top_n(10, beta) %>% ungroup() %>% arrange(topic, -beta)
 ```
+
+- Histograma de top 10 palabras en cada tópico
 
 ```{r}
 ap_top_terms6i <- lda_td6i %>% group_by(topic) %>% slice_max(beta, n = 10) %>% ungroup() %>% arrange(topic, -beta)
 
 ap_top_terms6i %>% mutate(term = reorder_within(term, beta, topic)) %>% ggplot(aes(beta, term, fill = factor(topic))) +
-geom_col(show.legend = FALSE) + facet_wrap(~ topic, scales = "free", ncol=4) + scale_y_reordered()
+geom_col(show.legend = FALSE) + facet_wrap(~ topic, scales = "free", ncol=3) + scale_y_reordered()
 ```
 
 ```{r}
-ap_top_terms8i <- lda_td8i %>% group_by(topic) %>% slice_max(beta, n = 10) %>% ungroup() %>% arrange(topic, -beta)
-
-ap_top_terms8i %>% mutate(term = reorder_within(term, beta, topic)) %>% ggplot(aes(beta, term, fill = factor(topic))) +
-geom_col(show.legend = FALSE) + facet_wrap(~ topic, scales = "free", ncol=4) + scale_y_reordered()
-```
-
-```{r}
-ap_top_terms10i <- lda_td10i %>% group_by(topic) %>% slice_max(beta, n = 10) %>% ungroup() %>% arrange(topic, -beta)
-
-ap_top_terms10i %>% mutate(term = reorder_within(term, beta, topic)) %>% ggplot(aes(beta, term, fill = factor(topic))) +
-geom_col(show.legend = FALSE) + facet_wrap(~ topic, scales = "free", ncol=5) + scale_y_reordered()
-```
-
-```{r}
-ap_top_terms12i <- lda_td12i %>% group_by(topic) %>% slice_max(beta, n = 4) %>% ungroup() %>% arrange(topic, -beta)
+ap_top_terms12i <- lda_td12i %>% group_by(topic) %>% slice_max(beta, n = 10) %>% ungroup() %>% arrange(topic, -beta)
 
 ap_top_terms12i %>% mutate(term = reorder_within(term, beta, topic)) %>% ggplot(aes(beta, term, fill = factor(topic))) +
-geom_col(show.legend = FALSE) + facet_wrap(~ topic, scales = "free", ncol=4) + scale_y_reordered()
-```
-
-```{r}
-ap_top_terms14i <- lda_td14i %>% group_by(topic) %>% slice_max(beta, n = 10) %>% ungroup() %>% arrange(topic, -beta)
-
-ap_top_terms14i %>% mutate(term = reorder_within(term, beta, topic)) %>% ggplot(aes(beta, term, fill = factor(topic))) +
 geom_col(show.legend = FALSE) + facet_wrap(~ topic, scales = "free", ncol=4) + scale_y_reordered()
 ```
 
 - Probabilidad de que un documento pertenzeca a un tópico
 
 ```{r}
+options(scipen=999)
 lda_gamma6i <- tidy(lda_6i, matrix = "gamma")
-lda_gamma8i <- tidy(lda_8i, matrix = "gamma")
-lda_gamma10i <- tidy(lda_10i, matrix = "gamma")
+
 lda_gamma12i <- tidy(lda_12i, matrix = "gamma")
-lda_gamma14i <- tidy(lda_14i, matrix = "gamma")
 ```
-
-
-
