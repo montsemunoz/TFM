@@ -263,3 +263,20 @@ lda_gamma6i <- tidy(lda_6i, matrix = "gamma")
 
 lda_gamma12i <- tidy(lda_12i, matrix = "gamma")
 ```
+
+- Heatmap de tópicos por partido
+
+```{r}
+topics <- topicmodels::posterior(lda_6i, dtm)[["topics"]]
+rownames(topics) <- c("VOX","PP","C's","PSOE","UP")
+colnames(topics) <- c("Tópico 1","Tópico 2","Tópico 3","Tópico 4","Tópico 5","Tópico 6")
+#colores <- colorRampPalette(c("grey", "white", "steelblue"))(256)
+colores <- colorRampPalette(brewer.pal(8, "Blues"))(25)
+heatmap(topics, scale = "none",col= colores, cexRow = 1.3, cexCol = 1.3)
+```
+
+
+
+
+
+
